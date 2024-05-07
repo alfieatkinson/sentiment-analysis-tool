@@ -3,26 +3,32 @@ import platform
 import sys
 import os
 
+from dotenv import load_dotenv
+
 from .analysis import *
 from .data import *
 from .ui import *
+from .messages import *
+from .config import *
 
-def version():
-    return "v0.1"
+def version() -> str:
+    return 'v0.1'
 
-def time():
-    return datetime.datetime.now().strftime("%Y-%m-%d @ %H:%M:%S.%f")
+def time() -> str:
+    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-def year():
+def year() -> str:
     return str(datetime.datetime.now().year)
 
-def platform():
+def platform() -> str:
     return platform.system() + " " + platform.release()
 
-def path():
+def path() -> list[str]:
     return sys.path
 
-def get_dir():
-    return os.path.dirname(os.path.realpath(__file__)) + "/../"
+def get_dir() -> str:
+    return os.path.dirname(os.path.realpath(__file__)) + '/../'
+
+load_dotenv()
 
 print("Initialising...")

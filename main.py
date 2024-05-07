@@ -1,4 +1,5 @@
 import toolkit
+import textwrap
 
 print(f"""
          _____            _   _                      _        
@@ -18,15 +19,22 @@ print(f"""
 Running main.py {toolkit.version()}   
 """)
 
-def main():
-    running = True
-    while running:
+def main() -> None:
+    M = toolkit.BertModel()
+    #X = toolkit.XScraper()
+    R = toolkit.RedditScraper()
+    C = toolkit.PostCollector(M, R)
+
+    C.scrape_posts(scrape_comments=True)
+    C.show_posts(show_comments=True)
+
+    while False:
         text = input("\nEnter text to analyse (empty input closes the program): ")
 
         if text == '':
             running = False
             break
-        result = toolkit.analysis.model.predict(text)
+        result = M.predict([text])
         print(f"Your statement was: {result}")
 
 if __name__ == "__main__":
