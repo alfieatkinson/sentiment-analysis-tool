@@ -20,3 +20,9 @@ def get_subreddits() -> list[str]:
 
 def set_subreddits(subreddits: list[str]) -> None:
     set_config('subreddits', subreddits)
+
+def get_score_weighting() -> bool:
+    return get_config('score_weighting')
+
+def set_score_weighting(score_weighting: bool) -> None:
+    set_config('score_weighting', score_weighting)

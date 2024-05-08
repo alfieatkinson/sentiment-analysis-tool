@@ -34,7 +34,7 @@ class PostCollector(object):
             return df.loc[df['ID'] == ID, column].item()
         except:
             toolkit.error(f"Could not get {column} from {ID} in {df}")
-            return ''
+            return None
 
     def scrape_posts(self, scrape_comments: bool = False) -> None:
         subreddits = toolkit.get_subreddits() # Get the list of subreddits to search from config
@@ -109,3 +109,14 @@ class PostCollector(object):
     def show_posts(self, show_comments: bool = False) -> None:
         for ID in self.posts['ID']:
             self.show_post(ID, show_comments=show_comments)
+
+    def merge_data(self) -> pd.DataFrame:
+        filtered_posts = self.posts[['ID', 'Subreddit', 'Date/Time', 'Score', 'Sentiment']]
+        filtered_comments = self.comments[['ID', 'Subreddit', 'Date/Time', 'Score', 'Sentiment']]
+
+        filtered_posts.columns = ['ID', 'Subreddit', 'Date/Time', 'Score', 'Sentiment']
+        filtered_comments.columns = ['ID', 'Subreddit', 'Date/Time', 'Score', 'Sentiment']
+
+        merged_df = pd.concat([filtered_posts, filtered_comments], ignore_index=True)
+        return merged_df
+    

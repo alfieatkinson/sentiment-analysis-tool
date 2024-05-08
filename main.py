@@ -1,5 +1,6 @@
 import toolkit
 import textwrap
+from datetime import datetime
 
 print(f"""
          _____            _   _                      _        
@@ -25,8 +26,15 @@ def main() -> None:
     R = toolkit.RedditScraper()
     C = toolkit.PostCollector(M, R)
 
-    C.scrape_posts(scrape_comments=True)
-    C.show_posts(show_comments=True)
+    #C.scrape_posts(scrape_comments=True)
+    #C.show_posts(show_comments=True)
+
+    A = toolkit.Analyser(C.merge_data())
+
+    A.generate_line("Sentiment Over Time", ('Date', 'Sentiment'))
+    A.generate_pie("Overall Sentiment")
+    A.generate_bar("Subreddit Sentiment", ('Subreddit', 'Sentiment'))
+    #A.generate_line("Sentiment Over Time", ('Date', 'Sentiment'), start_date=datetime(2024, 5, 1, 14, 53).timestamp(), split_subs=True)
 
     while False:
         text = input("\nEnter text to analyse (empty input closes the program): ")
