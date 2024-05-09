@@ -15,7 +15,7 @@ import toolkit
 class Analyser(object):
     def __init__(self, dataset: pd.DataFrame) -> None:
         self.dataset = dataset
-        self._set_sentiment_score(toolkit.get_score_weighting())
+        self._set_sentiment_score(toolkit.get_config('score_weighting'))
 
     def _sentiment_to_int(self, sentiment: str) -> int:
         if sentiment == 'Positive':

@@ -37,8 +37,7 @@ class PostCollector(object):
             toolkit.error(f"Could not get {column} from {ID} in {df}")
             return None
 
-    def scrape_posts(self) -> None:
-        subreddits = toolkit.get_subreddits() # Get the list of subreddits to search from config
+    def scrape_posts(self, subreddits: dict[str, str]) -> None:
         scrape_comments = toolkit.get_config('scrape_comments')
 
         if scrape_comments:
@@ -121,4 +120,3 @@ class PostCollector(object):
 
         merged_df = pd.concat([filtered_posts, filtered_comments], ignore_index=True)
         return merged_df
-    

@@ -1,0 +1,18 @@
+{
+    "all" : {
+        "all" : ""
+    },
+    "Shoes" : {
+        "Nike" : "",
+        "Puma" : "",
+        "Adidas" : "",
+        "Reebok" : "",
+        "Sketchers" : ""
+    },
+    "Nike" : {
+        "Nike" : "",
+        "Sneakers" : "nike",
+        "sneakermarket" : "nike",
+        "streetwear" : "nike"
+    }
+}

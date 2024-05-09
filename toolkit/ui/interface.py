@@ -100,54 +100,32 @@ class MainWindow(QMainWindow):
         self.pie_chart = MplCanvas(self)
         self.bar_chart = MplCanvas(self)
 
+        self.font = QFont('Arial', 12)
+        self.font_heading = QFont('Arial', 20)
+        self.font_heading.setBold(True)
+
         self.setWindowTitle("Sentiment Analysis Tool") # Set the title of the window
 
         # Get the screen width and height and use it to set window geometry
         screen_resolution = QApplication.instance().primaryScreen().size()
-        width = screen_resolution.width() / 2
-        height = screen_resolution.height() / 2
-        x = screen_resolution.width() - width * 1.5
-        y = screen_resolution.height() - height * 1.5
+        screen_width = screen_resolution.width()
+        screen_height = screen_resolution.height()
+        width = screen_width / 2
+        height = screen_height / 2
+        x = screen_width - width * 1.5
+        y = screen_height - height * 1.5
         self.setGeometry(x, y, width, height) # Set the window size and position
 
-        main_widget = QWidget(self)
-        self.setCentralWidget(main_widget)
+        print(f"Screen resolution is {screen_width}x{screen_height}, initialising window at {width}x{height}.")
+
+        widget = QWidget(self)
+        self.setCentralWidget(widget)
 
         self._make_menu_bar()
 
-        # LAYOUTS
-        main_layout = QVBoxLayout() # Create the main layout containing everything
-
-        # Create sub-layouts
-        middle_layout = QHBoxLayout() # Create the middle layout
-
-        left_layout = QVBoxLayout() # Create the layout for the left side
-        time_changer_layout = QVBoxLayout() # Create the layout for the time changer
-        time_period_layout = self._make_time_period_layout() # Create the layout for the time period selector
-        custom_time_layout = self._make_custom_time_layout() # Create the layout for the custom time selector
-
-        time_changer_layout.addWidget(QLabel("Time Period"))
-        time_changer_layout.addLayout(time_period_layout)
-        time_changer_layout.addWidget(QLabel("Custom"))
-        time_changer_layout.addLayout(custom_time_layout)
-
-        left_layout.addLayout(time_changer_layout)
-
-        left_layout.addStretch()
-
-        right_layout = QVBoxLayout()
-        right_layout.addWidget(self._make_tabs())
-
-        middle_layout.addLayout(left_layout)
-        middle_layout.addLayout(right_layout)
-
-
-        main_layout.addWidget(QLabel("Analysis of BRAND"))
-        main_layout.addLayout(middle_layout)
+        layout = self._make_layout()
         
-
-        
-        main_widget.setLayout(main_layout)
+        widget.setLayout(layout)
 
         self.threadpool = QThreadPool()
         print(f"Multithreading with maximum {self.threadpool.maxThreadCount()} threads.")
@@ -181,10 +159,76 @@ class MainWindow(QMainWindow):
         menu.addAction(button_settings)
 
     def _make_layout(self):
-        pass
+        layout = QVBoxLayout() # Create the main layout containing everything
+
+        layout.addLayout(self._make_top_layout())
+        layout.addLayout(self._make_main_layout())
+
+        return layout
+
+    def _make_top_layout(self):
+        layout = QHBoxLayout() # Create the top bar layout
+
+        label = QLabel(f"Analysis of name")
+        label.setFont(self.font_heading)
+
+        layout.addStretch()
+        layout.addWidget(label)
+        layout.addStretch()
+
+        return layout
+
+    def _make_main_layout(self):
+        layout = QHBoxLayout() # Create the main layout
+
+        # Add components to the layout
+        layout.addLayout(self._make_left_layout())
+        layout.addLayout(self._make_right_layout())
+
+        return layout
 
     def _make_left_layout(self):
-        pass
+        layout = QVBoxLayout() # Create the layout for the left side
+    
+        # Add components to the layout
+        layout.addLayout(self._make_profile_changer_layout())
+        layout.addLayout(self._make_time_changer_layout())
+        layout.addStretch()
+
+        return layout
+    
+    def _make_right_layout(self):
+        layout = QVBoxLayout()
+
+        layout.addWidget(self._make_tabs()) # Add tabs to the layout
+
+        return layout
+
+    def _make_profile_changer_layout(self):
+        layout = QHBoxLayout()
+
+        combo = QComboBox()
+        combo.addItems([key for key in toolkit.get_profiles().keys()])
+        combo.activated.connect(lambda: self._switch_profile(combo.currentIndex()))
+
+        layout.addStretch()
+        layout.addWidget(QLabel("Profile:"))
+        layout.addWidget(combo)
+
+        return layout
+
+    def _make_time_changer_layout(self):
+        layout = QVBoxLayout() # Create the layout for the time changer
+        time_period_layout = self._make_time_period_layout() # Create the layout for the time period selector
+        custom_time_layout = self._make_custom_time_layout() # Create the layout for the custom time selector
+
+        # Add components to the layout
+        layout.addWidget(QLabel("Time Period"))
+        layout.addLayout(time_period_layout)
+        layout.addWidget(QLabel("Custom"))
+        layout.addLayout(custom_time_layout)
+
+        return layout
 
     def _make_time_period_layout(self):
         layout = QHBoxLayout()
@@ -280,22 +324,27 @@ class MainWindow(QMainWindow):
 
     def _time_period_day(self):
         self.data_start_date = (datetime.now() - timedelta(days=2)).timestamp()
+        self.data_end_date = datetime.now().timestamp()
         print("Time period set to day.")
 
     def _time_period_week(self):
         self.data_start_date = (datetime.now() - timedelta(days=8)).timestamp()
+        self.data_end_date = datetime.now().timestamp()
         print("Time period set to week.")
 
     def _time_period_month(self):
         self.data_start_date = (datetime.now() - timedelta(days=31)).timestamp()
+        self.data_end_date = datetime.now().timestamp()
         print("Time period set to month.")
 
     def _time_period_year(self):
         self.data_start_date = (datetime.now() - timedelta(days=366)).timestamp()
+        self.data_end_date = datetime.now().timestamp()
         print("Time period set to year.")
 
     def _time_period_alltime(self):
         self.data_start_date = self.collector.posts['Date/Time'].min()
+        self.data_end_date = datetime.now().timestamp()
         print("Time period set to alltime.")
 
     def _set_dates(self, selector_from: QDateEdit, selector_to: QDateEdit) -> None:
@@ -308,11 +357,15 @@ class MainWindow(QMainWindow):
     def _split_subs(self, state: bool):
         toolkit.set_config('split_subs', int(state))
 
-    def _open_settings_window(self):
-        print("SETTINGS OPENED!")
+    def _switch_profile(self, index: str):
+        keys = [key for key in toolkit.get_profiles().keys()]
+        print(toolkit.get_profile(keys[index]))
 
     def _new_brand_profile(self):
         pass
 
     def _del_brand_profile(self):
         pass
+
+    def _open_settings_window(self):
+        print("SETTINGS OPENED!")
