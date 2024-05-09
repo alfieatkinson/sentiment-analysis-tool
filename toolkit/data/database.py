@@ -10,7 +10,8 @@ class PostCollector(object):
         self.scraper = scraper
         self.posts = pd.DataFrame(columns=['ID', 'Subreddit', 'Date/Time', 'Title', 'Body', 'Score', 'Comments' 'Sentiment'])
         self.comments = pd.DataFrame(columns=['ID', 'PostID', 'Subreddit', 'Date/Time', 'Body', 'Score', 'Sentiment'])
-        self.from_json()
+        if not self.from_json():
+            self.scrape_posts()
 
     def to_json(self) -> bool:
         try:
@@ -36,8 +37,9 @@ class PostCollector(object):
             toolkit.error(f"Could not get {column} from {ID} in {df}")
             return None
 
-    def scrape_posts(self, scrape_comments: bool = False) -> None:
+    def scrape_posts(self) -> None:
         subreddits = toolkit.get_subreddits() # Get the list of subreddits to search from config
+        scrape_comments = toolkit.get_config('scrape_comments')
 
         if scrape_comments:
             new_posts, new_comments = self.scraper.search_subreddits(subreddits, scrape_comments=True) # Scrape the subreddits for new posts and comments

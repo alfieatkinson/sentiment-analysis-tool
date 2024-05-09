@@ -1,6 +1,10 @@
-import toolkit
+import sys
 import textwrap
 from datetime import datetime
+
+from PyQt6.QtWidgets import QApplication
+
+import toolkit
 
 print(f"""
          _____            _   _                      _        
@@ -21,20 +25,25 @@ Running main.py {toolkit.version()}
 """)
 
 def main() -> None:
-    M = toolkit.BertModel()
+    #M = toolkit.BertModel()
     #X = toolkit.XScraper()
-    R = toolkit.RedditScraper()
-    C = toolkit.PostCollector(M, R)
+    #R = toolkit.RedditScraper()
+    #C = toolkit.PostCollector(M, R)
 
     #C.scrape_posts(scrape_comments=True)
     #C.show_posts(show_comments=True)
 
-    A = toolkit.Analyser(C.merge_data())
+    #A = toolkit.Analyser(C.merge_data())
 
-    A.generate_line("Sentiment Over Time", ('Date', 'Sentiment'))
-    A.generate_pie("Overall Sentiment")
-    A.generate_bar("Subreddit Sentiment", ('Subreddit', 'Sentiment'))
+    #A.generate_line("Sentiment Over Time", ('Date', 'Sentiment'))
+    #A.generate_pie("Overall Sentiment")
+    #A.generate_bar("Subreddit Sentiment", ('Subreddit', 'Sentiment'))
     #A.generate_line("Sentiment Over Time", ('Date', 'Sentiment'), start_date=datetime(2024, 5, 1, 14, 53).timestamp(), split_subs=True)
+
+    app = QApplication([])
+    window = toolkit.MainWindow()
+    window.show()
+    app.exec()
 
     while False:
         text = input("\nEnter text to analyse (empty input closes the program): ")
