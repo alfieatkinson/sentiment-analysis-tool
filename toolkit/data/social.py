@@ -7,16 +7,6 @@ import pandas as pd
 
 import toolkit
 
-class Post(object):
-    def __init__(self, info, comments):
-        self.ID = info[0]
-        self.subreddit = info[1]
-        self.datetime = info[2]
-        self.title = info[3]
-        self.body = info[4]
-        self.score = info[5]
-        self.sentiment = info[6]
-
 class XScraper(object):
     def __init__(self):
         try:
@@ -58,12 +48,12 @@ class RedditScraper(object):
 
         return pd.DataFrame(attributes, columns=columns)
     
-    def search_subreddits(self, subs: list[str], n: int = 100, scrape_comments: bool = False) -> 'pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]':
+    def search_subreddits(self, subs: list[str], n: int = 1000, scrape_comments: bool = False) -> 'pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]':
         posts = []
         comments = []
         for sub in subs:
             try:
-                for post in self.api.subreddit(sub).new(limit=n):
+                for post in self.api.subreddit(sub).hot(limit=n):
                     posts.append(post)
 
                     if scrape_comments:

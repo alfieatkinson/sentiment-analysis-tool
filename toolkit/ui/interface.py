@@ -104,36 +104,48 @@ class MainWindow(QMainWindow):
         self.font_heading = QFont('Arial', 20)
         self.font_heading.setBold(True)
 
+        self.profile = toolkit.get_profile(0)
+
+        self.window_profile_editor = None
+
         self.setWindowTitle("Sentiment Analysis Tool") # Set the title of the window
 
         # Get the screen width and height and use it to set window geometry
         screen_resolution = QApplication.instance().primaryScreen().size()
         screen_width = screen_resolution.width()
         screen_height = screen_resolution.height()
-        width = screen_width / 2
-        height = screen_height / 2
+        width = screen_width // 2
+        height = screen_height // 2
         x = screen_width - width * 1.5
         y = screen_height - height * 1.5
         self.setGeometry(x, y, width, height) # Set the window size and position
 
-        print(f"Screen resolution is {screen_width}x{screen_height}, initialising window at {width}x{height}.")
-
-        widget = QWidget(self)
-        self.setCentralWidget(widget)
+        self.widget = QWidget(self)
+        self.setCentralWidget(self.widget)
 
         self._make_menu_bar()
 
-        layout = self._make_layout()
+        self.layout = self._make_layout()
         
-        widget.setLayout(layout)
+        self.widget.setLayout(self.layout)
 
         self.threadpool = QThreadPool()
+
+        print()
+        print(f"Screen resolution is {screen_width}x{screen_height}, initialising window at {width}x{height}.")
         print(f"Multithreading with maximum {self.threadpool.maxThreadCount()} threads.")
 
         self.timer = QTimer()
-        self.timer.setInterval(100)
-        self.timer.timeout.connect(self._update_charts)
+        self.timer.setInterval(toolkit.get_config('update_interval'))
+        self.timer.timeout.connect(self._update)
         self.timer.start()
+
+    def _update(self):
+        self.widget = QWidget(self)
+        self.setCentralWidget(self.widget)
+        self.layout = self._make_layout()
+        self._update_charts()
+        self.widget.setLayout(self.layout)
 
     def _make_menu_bar(self):
         # MENU BAR
@@ -144,10 +156,12 @@ class MainWindow(QMainWindow):
         button_new_brand_profile = QAction("New Brand Profile", self)
         button_new_brand_profile.setStatusTip("Creates a new brand profile.")
         button_new_brand_profile.triggered.connect(self._new_brand_profile)
-        # Button to delete brand profile
-        button_del_brand_profile = QAction("Delete Brand Profile", self)
-        button_del_brand_profile.setStatusTip("Deletes the currently selected brand profile.")
-        button_del_brand_profile.triggered.connect(self._del_brand_profile)
+
+        # Button to create new brand profile
+        button_edit_brand_profile = QAction("Edit Brand Profile", self)
+        button_edit_brand_profile.setStatusTip("Edits the current brand profile.")
+        button_edit_brand_profile.triggered.connect(self._edit_brand_profile)
+
         # Button to open settings window
         button_settings = QAction("Settings", self)
         button_settings.setStatusTip("Opens settings window.")
@@ -155,7 +169,7 @@ class MainWindow(QMainWindow):
         # Add buttons to the menu
         file_menu = menu.addMenu("&File")
         file_menu.addAction(button_new_brand_profile)
-        file_menu.addAction(button_del_brand_profile)
+        file_menu.addAction(button_edit_brand_profile)
         menu.addAction(button_settings)
 
     def _make_layout(self):
@@ -169,7 +183,7 @@ class MainWindow(QMainWindow):
     def _make_top_layout(self):
         layout = QHBoxLayout() # Create the top bar layout
 
-        label = QLabel(f"Analysis of name")
+        label = QLabel(f"Analysis of {self.profile['name']}")
         label.setFont(self.font_heading)
 
         layout.addStretch()
@@ -208,8 +222,11 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout()
 
         combo = QComboBox()
-        combo.addItems([key for key in toolkit.get_profiles().keys()])
+        profiles = toolkit.get_profiles()
+        del profiles['next_index']
+        combo.addItems([toolkit.get_profile(str(key))['name'] for key in profiles.keys()])
         combo.activated.connect(lambda: self._switch_profile(combo.currentIndex()))
+        combo.setCurrentText(self.profile['name'])
 
         layout.addStretch()
         layout.addWidget(QLabel("Profile:"))
@@ -286,7 +303,8 @@ class MainWindow(QMainWindow):
         self.analyser.generate_line(self.line_chart, "Sentiment Over Time", ("Date", "Sentiment"), self.data_start_date, self.data_end_date)
 
         button_split_subs = QCheckBox("Split by Subreddit?")
-        button_split_subs.stateChanged.connect(self._split_subs)
+        button_split_subs.setChecked(toolkit.get_config('split_subs'))
+        button_split_subs.stateChanged.connect(lambda: self._split_subs(button_split_subs.isChecked()))
 
         layout.addWidget(self.line_chart)
         layout.addWidget(button_split_subs)
@@ -325,26 +343,36 @@ class MainWindow(QMainWindow):
     def _time_period_day(self):
         self.data_start_date = (datetime.now() - timedelta(days=2)).timestamp()
         self.data_end_date = datetime.now().timestamp()
+
+        self._update()
         print("Time period set to day.")
 
     def _time_period_week(self):
         self.data_start_date = (datetime.now() - timedelta(days=8)).timestamp()
         self.data_end_date = datetime.now().timestamp()
+
+        self._update()
         print("Time period set to week.")
 
     def _time_period_month(self):
         self.data_start_date = (datetime.now() - timedelta(days=31)).timestamp()
         self.data_end_date = datetime.now().timestamp()
+
+        self._update()
         print("Time period set to month.")
 
     def _time_period_year(self):
         self.data_start_date = (datetime.now() - timedelta(days=366)).timestamp()
         self.data_end_date = datetime.now().timestamp()
+
+        self._update()
         print("Time period set to year.")
 
     def _time_period_alltime(self):
         self.data_start_date = self.collector.posts['Date/Time'].min()
         self.data_end_date = datetime.now().timestamp()
+
+        self._update()
         print("Time period set to alltime.")
 
     def _set_dates(self, selector_from: QDateEdit, selector_to: QDateEdit) -> None:
@@ -354,18 +382,177 @@ class MainWindow(QMainWindow):
         self.data_start_date = datetime(start_date.year, start_date.month, start_date.day).timestamp()
         self.data_end_date = datetime(end_date.year, end_date.month, end_date.day).timestamp()
 
+        self._update()
+
     def _split_subs(self, state: bool):
         toolkit.set_config('split_subs', int(state))
 
+        self._update()
+
     def _switch_profile(self, index: str):
         keys = [key for key in toolkit.get_profiles().keys()]
-        print(toolkit.get_profile(keys[index]))
+        print(keys)
+        self.profile = toolkit.get_profile(keys[index + 1])
+        self._update()
 
     def _new_brand_profile(self):
-        pass
+        self.window_profile_editor = ProfileEditorWindow()
+        self.window_profile_editor.submitClicked.connect(self._update)
+        self.window_profile_editor.show()
 
-    def _del_brand_profile(self):
-        pass
+    def _edit_brand_profile(self):
+        self.window_profile_editor = ProfileEditorWindow(self.profile)
+        self.window_profile_editor.submitClicked.connect(self._update)
+        self.window_profile_editor.show()
 
     def _open_settings_window(self):
         print("SETTINGS OPENED!")
+
+class ProfileEditorWindow(QWidget):
+    """
+    Window for navigating and editing profiles
+    """
+    submitClicked = pyqtSignal()
+
+    def __init__(self, profile: dict[str, any] = {}):
+        super().__init__()
+        self.profile = profile
+        if not self.profile:
+            self.profile['id'] = toolkit.get_profiles()['next_index']
+            self.profile['name'] = ''
+            self.profile['subs'] = {}
+            toolkit.increment_profiles_next_index()
+
+        self.setWindowTitle("Profile Editor")
+
+        self.layout = self._make_layout()
+
+        self.setLayout(self.layout)
+
+    def _update(self):
+        QWidget().setLayout(self.layout)
+        self.layout = self._make_layout()
+        self.setLayout(self.layout)
+
+        self.submitClicked.emit()
+
+    def _make_layout(self):
+        layout = QVBoxLayout()
+        
+        label_heading = QLabel(f"Profile {self.profile['name']}")
+
+        label_subs = QLabel("Edit Subreddits")
+
+        layout.addWidget(label_heading)
+        layout.addLayout(self._make_name_entry_layout())
+        layout.addWidget(label_subs)
+        layout.addLayout(self._make_sub_entry_layout())
+        layout.addLayout(self._make_subs_layout())
+        layout.addStretch()
+
+        return layout
+
+
+    def _make_name_entry_layout(self):
+        layout = QHBoxLayout()
+
+        label = QLabel("Name:")
+
+        textbox = QLineEdit()
+        textbox.setMaxLength(16)
+        textbox.setPlaceholderText("Enter profile name")
+
+        button_enter = QPushButton("Enter")
+        button_enter.clicked.connect(lambda: self._add_profile(textbox.text()))
+        
+        button_del = QPushButton("Delete")
+        button_del.clicked.connect(self._del_profile)
+
+        layout.addWidget(label)
+        layout.addWidget(textbox)
+        layout.addWidget(button_enter)
+        layout.addWidget(button_del)
+
+        return layout
+
+    def _make_sub_entry_layout(self):
+        layout = QHBoxLayout()
+
+        label_name = QLabel("Name:")
+        
+        textbox_name = QLineEdit()
+        textbox_name.setMaxLength(21)
+        textbox_name.setPlaceholderText("Enter subreddit name")
+
+        label_search = QLabel("Search:")
+
+        textbox_search = QLineEdit()
+        textbox_search.setMaxLength(16)
+        textbox_search.setPlaceholderText("Optional search term")
+
+        button_add = QPushButton("Add")
+        button_add.clicked.connect(lambda: self._add_sub(textbox_name.text(), textbox_search.text()))
+
+        layout.addWidget(label_name)
+        layout.addWidget(textbox_name)
+        layout.addWidget(label_search)
+        layout.addWidget(textbox_search)
+        layout.addWidget(button_add)
+
+        return layout
+    
+    def _make_subs_layout(self):
+        layout = QVBoxLayout()
+
+        if not self.profile['subs']:
+            label = QLabel("No subs")
+            layout.addWidget(label)
+            return layout
+        
+        for name, search in self.profile['subs'].items():
+            layout.addLayout(self._make_row_layout(name, search))
+
+        return layout
+
+    def _make_row_layout(self, name: str, search: str):
+        layout = QHBoxLayout()
+
+        if search == '':
+            label = QLabel(f"/r/{name}")
+        else:
+            label = QLabel(f"'{search}' in /r/{name}")
+
+        button_del = QPushButton("Delete")
+        button_del.clicked.connect(lambda: self._del_sub(name))
+
+        layout.addWidget(label)
+        layout.addStretch()
+        layout.addWidget(button_del)
+
+        return layout
+
+    def _add_profile(self, name: str):
+        self.profile['name'] = name
+        toolkit.set_profile(self.profile['id'], self.profile)
+        self._update()
+        self.close()
+
+    def _del_profile(self):
+        try:
+            toolkit.del_profile(self.profile['id'])
+        except:
+            pass
+        self._update()
+        self.close()
+
+    def _add_sub(self, name: str, search: str):
+        try:
+            self.profile['subs'][name] = search
+            self._update()
+        except:
+            toolkit.messages.error(f"Could not add subreddit /r/{name} to profile {self.profile['name']}.")
+
+    def _del_sub(self, name: str):
+        del self.profile['subs'][name]
+        toolkit.set_profile(self.profile['id'], self.profile)
+        self._update()

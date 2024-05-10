@@ -8,6 +8,7 @@ class PostCollector(object):
     def __init__(self, model, scraper):
         self.model = model
         self.scraper = scraper
+        self.path = f'{toolkit.get_dir()}/src/profiles/'
         self.posts = pd.DataFrame(columns=['ID', 'Subreddit', 'Date/Time', 'Title', 'Body', 'Score', 'Comments' 'Sentiment'])
         self.comments = pd.DataFrame(columns=['ID', 'PostID', 'Subreddit', 'Date/Time', 'Body', 'Score', 'Sentiment'])
         if not self.from_json():
@@ -15,16 +16,16 @@ class PostCollector(object):
 
     def to_json(self) -> bool:
         try:
-            self.posts.to_json(toolkit.get_dir() + '/src/posts/posts.json')
-            self.comments.to_json(toolkit.get_dir() + '/src/posts/comments.json')
+            self.posts.to_json(f'{self.path}/posts.json')
+            self.comments.to_json(f'{self.path}/comments.json')
             return True
         except:
             return False
 
     def from_json(self) -> bool:
         try:
-            self.posts = pd.read_json(toolkit.get_dir() + '/src/posts/posts.json')
-            self.comments = pd.read_json(toolkit.get_dir() + '/src/posts/comments.json')
+            self.posts = pd.read_json(f'{self.path}/posts.json')
+            self.comments = pd.read_json(f'{self.path}/comments.json')
             self.posts['Comments'] = self.posts['Comments'].map(lambda x: tuple(x))
             return True
         except:
