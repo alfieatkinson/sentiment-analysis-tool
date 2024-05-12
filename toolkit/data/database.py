@@ -5,10 +5,11 @@ import pandas as pd
 import toolkit
 
 class PostCollector(object):
-    def __init__(self, model, scraper):
+    def __init__(self, model, scraper, profile: dict[str, any]) -> None:
         self.model = model
         self.scraper = scraper
-        self.path = f'{toolkit.get_dir()}/src/profiles/'
+        self.profile = profile
+        self.path = f'{toolkit.get_dir()}/src/profiles/{self.profile["id"]}'
         self.posts = pd.DataFrame(columns=['ID', 'Subreddit', 'Date/Time', 'Title', 'Body', 'Score', 'Comments' 'Sentiment'])
         self.comments = pd.DataFrame(columns=['ID', 'PostID', 'Subreddit', 'Date/Time', 'Body', 'Score', 'Sentiment'])
         if not self.from_json():
@@ -38,20 +39,26 @@ class PostCollector(object):
             toolkit.error(f"Could not get {column} from {ID} in {df}")
             return None
 
-    def scrape_posts(self, subreddits: dict[str, str]) -> None:
-        scrape_comments = toolkit.get_config('scrape_comments')
+    def scrape_posts(self) -> None:
+        subs = self.profile['subs']
 
+        scrape_comments = toolkit.get_config('scrape_comments')
         if scrape_comments:
-            new_posts, new_comments = self.scraper.search_subreddits(subreddits, scrape_comments=True) # Scrape the subreddits for new posts and comments
+            new_posts, new_comments = self.scraper.search_subs(subs) # Scrape the subreddits for new posts and comments
             print(new_posts)
             print(new_comments)
         else:
-            new_posts = self.scraper.search_subreddits(subreddits) # Scrape the subreddits for new posts
+            new_posts = self.scraper.search_subs(subs) # Scrape the subreddits for new posts
             print(new_posts)
+
+        latest_post = self.posts['Date/Time'].max()
+        latest_comment = self.comments['Date/Time'].max()
+        new_posts = new_posts[new_posts['Date/Time'] > latest_post]
+        new_comments = new_comments[new_comments['Date/Time'] > latest_comment]
 
         sentiment = [] # Initialise list for sentiment
         for ID in new_posts['ID']:
-            text = f"{self.get_record(new_posts, ID, 'Title')} {self.get_record(new_posts, ID, 'Body')}" # Merge title and body of each post
+            text = f"{self.get_record(new_posts, ID, 'Title')} [SEP] {self.get_record(new_posts, ID, 'Body')}" # Merge title and body of each post
             prediction = self.model.predict(text) # Predict using the combined text
             sentiment.append(prediction) # Add the predicted sentiment to list
         new_posts.insert(6, 'Sentiment', sentiment, True) # Insert sentiment column into new_posts
@@ -63,7 +70,9 @@ class PostCollector(object):
         if scrape_comments:
             sentiment = [] # Initialise list for sentiment
             for ID in new_comments['ID']:
-                text = self.get_record(new_comments, ID, 'Body') # Get the body of the comment
+                post_id = self.get_record(new_comments, ID, 'PostID')
+                post_text = f"{self.get_record(new_posts, post_id, 'Title')} [SEP] {self.get_record(new_posts, post_id, 'Body')}"
+                text = f"{post_text} [SEP] {self.get_record(new_comments, ID, 'Body')}" # Get the body of the comment
                 prediction = self.model.predict(text) # Predict using the body
                 sentiment.append(prediction) # Add the predicted sentiment to list
             new_comments.insert(6, 'Sentiment', sentiment, True) # Insert sentiment column into new_comments

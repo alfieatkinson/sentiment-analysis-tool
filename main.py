@@ -1,6 +1,5 @@
 import sys
 import textwrap
-from datetime import datetime
 
 from PyQt6.QtWidgets import QApplication
 

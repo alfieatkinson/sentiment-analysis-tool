@@ -15,10 +15,10 @@ def version() -> str:
     return 'v0.2'
 
 def time() -> str:
-    return datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 def year() -> str:
-    return str(datetime.datetime.now().year)
+    return str(datetime.now().year)
 
 def platform() -> str:
     return platform.system() + " " + platform.release()

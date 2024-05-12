@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
@@ -56,7 +58,7 @@ class Worker(QRunnable):
         self.signals = WorkerSignals()
 
         # Add the callback to our kwargs
-        self.kwargs['progress_callback'] = self.signals.progress
+        #self.kwargs['progress_callback'] = self.signals.progress
     
     @pyqtSlot()
     def run(self):
@@ -88,9 +90,23 @@ class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
 
+        self.threadpool = QThreadPool()
+        print(f"Multithreading with maximum {self.threadpool.maxThreadCount()} threads.") 
+
         self.model = toolkit.BertModel()
         self.scraper = toolkit.RedditScraper()
-        self.collector = toolkit.PostCollector(self.model, self.scraper)
+
+        self.profile = toolkit.get_profile(0)
+
+        profiles = toolkit.get_profiles()
+        del profiles['next_index']
+        for ID in profiles.keys():
+            print(f"Profile {ID}: {toolkit.get_profile(ID)}")
+            self.collector = toolkit.PostCollector(self.model, self.scraper, toolkit.get_profile(ID))
+            self._collect_new_posts()
+
+        self.profile = toolkit.get_profile(0)
+        self.collector = toolkit.PostCollector(self.model, self.scraper, self.profile)
         self.analyser = toolkit.Analyser(self.collector.merge_data())
 
         self.data_start_date = self.collector.posts['Date/Time'].min()
@@ -103,8 +119,6 @@ class MainWindow(QMainWindow):
         self.font = QFont('Arial', 12)
         self.font_heading = QFont('Arial', 20)
         self.font_heading.setBold(True)
-
-        self.profile = toolkit.get_profile(0)
 
         self.window_profile_editor = None
 
@@ -119,6 +133,8 @@ class MainWindow(QMainWindow):
         x = screen_width - width * 1.5
         y = screen_height - height * 1.5
         self.setGeometry(x, y, width, height) # Set the window size and position
+        print()
+        print(f"Screen resolution is {screen_width}x{screen_height}, initialising window at {width}x{height}.")
 
         self.widget = QWidget(self)
         self.setCentralWidget(self.widget)
@@ -127,23 +143,19 @@ class MainWindow(QMainWindow):
 
         self.layout = self._make_layout()
         
-        self.widget.setLayout(self.layout)
-
-        self.threadpool = QThreadPool()
-
-        print()
-        print(f"Screen resolution is {screen_width}x{screen_height}, initialising window at {width}x{height}.")
-        print(f"Multithreading with maximum {self.threadpool.maxThreadCount()} threads.")
+        self.widget.setLayout(self.layout)   
 
         self.timer = QTimer()
         self.timer.setInterval(toolkit.get_config('update_interval'))
-        self.timer.timeout.connect(self._update)
+        self.timer.timeout.connect(self._collect_new_posts)
         self.timer.start()
 
     def _update(self):
         self.widget = QWidget(self)
         self.setCentralWidget(self.widget)
         self.layout = self._make_layout()
+        self.analyser.update_dataset(self.collector.merge_data())
+        print(self.analyser.dataset)
         self._update_charts()
         self.widget.setLayout(self.layout)
 
@@ -393,26 +405,38 @@ class MainWindow(QMainWindow):
         keys = [key for key in toolkit.get_profiles().keys()]
         print(keys)
         self.profile = toolkit.get_profile(keys[index + 1])
+        self.collector = toolkit.PostCollector(self.model, self.scraper, self.profile)
         self._update()
 
     def _new_brand_profile(self):
         self.window_profile_editor = ProfileEditorWindow()
-        self.window_profile_editor.submitClicked.connect(self._update)
+        self.window_profile_editor.submit_clicked.connect(self._update)
         self.window_profile_editor.show()
 
     def _edit_brand_profile(self):
         self.window_profile_editor = ProfileEditorWindow(self.profile)
-        self.window_profile_editor.submitClicked.connect(self._update)
+        self.window_profile_editor.submit_clicked.connect(self._update)
         self.window_profile_editor.show()
 
     def _open_settings_window(self):
         print("SETTINGS OPENED!")
 
+    def _collect_new_posts(self):
+        worker = Worker(self.collector.scrape_posts)
+        worker.signals.finished.connect(self._update)
+        self.threadpool.start(worker)
+        toolkit.console(f"Collecting new posts for {self.profile['name']} profile.")
+
+    def _train_model(self):
+        worker = Worker(self.model.train)
+        worker.signals.finished.connect(self._update)
+        self.threadpool.start(worker)
+
 class ProfileEditorWindow(QWidget):
     """
     Window for navigating and editing profiles
     """
-    submitClicked = pyqtSignal()
+    submit_clicked = pyqtSignal()
 
     def __init__(self, profile: dict[str, any] = {}):
         super().__init__()
@@ -434,7 +458,7 @@ class ProfileEditorWindow(QWidget):
         self.layout = self._make_layout()
         self.setLayout(self.layout)
 
-        self.submitClicked.emit()
+        self.submit_clicked.emit()
 
     def _make_layout(self):
         layout = QVBoxLayout()
@@ -487,8 +511,8 @@ class ProfileEditorWindow(QWidget):
         label_search = QLabel("Search:")
 
         textbox_search = QLineEdit()
-        textbox_search.setMaxLength(16)
-        textbox_search.setPlaceholderText("Optional search term")
+        textbox_search.setMaxLength(256)
+        textbox_search.setPlaceholderText("Optional search terms (separated by commas)")
 
         button_add = QPushButton("Add")
         button_add.clicked.connect(lambda: self._add_sub(textbox_name.text(), textbox_search.text()))
@@ -514,13 +538,14 @@ class ProfileEditorWindow(QWidget):
 
         return layout
 
-    def _make_row_layout(self, name: str, search: str):
+    def _make_row_layout(self, name: str, search_terms: list[str]):
         layout = QHBoxLayout()
 
-        if search == '':
-            label = QLabel(f"/r/{name}")
+        if search_terms:
+            search_terms_string = ', '.join(search_terms)
+            label = QLabel(f"'{search_terms_string}' in /r/{name}")
         else:
-            label = QLabel(f"'{search}' in /r/{name}")
+            label = QLabel(f"/r/{name}")
 
         button_del = QPushButton("Delete")
         button_del.clicked.connect(lambda: self._del_sub(name))
@@ -534,6 +559,11 @@ class ProfileEditorWindow(QWidget):
     def _add_profile(self, name: str):
         self.profile['name'] = name
         toolkit.set_profile(self.profile['id'], self.profile)
+
+        path = f'{toolkit.get_dir()}/src/profiles/{self.profile["id"]}/'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        
         self._update()
         self.close()
 
@@ -545,12 +575,13 @@ class ProfileEditorWindow(QWidget):
         self._update()
         self.close()
 
-    def _add_sub(self, name: str, search: str):
+    def _add_sub(self, name: str, search_terms: str):
+        search_terms_list = [search_term.strip() for search_term in search_terms.split(',')]
         try:
-            self.profile['subs'][name] = search
+            self.profile['subs'][name] = search_terms_list
             self._update()
-        except:
-            toolkit.messages.error(f"Could not add subreddit /r/{name} to profile {self.profile['name']}.")
+        except Exception as e:
+            toolkit.messages.error(f"Could not add subreddit /r/{name} to profile {self.profile['name']}. {e}.")
 
     def _del_sub(self, name: str):
         del self.profile['subs'][name]
