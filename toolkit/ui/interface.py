@@ -656,7 +656,9 @@ class MainWindow(QMainWindow):
         """
         Open settings window.
         """
-        print("SETTINGS OPENED!")
+        self.window_settings = SettingsWindow()
+        self.window_settings.submit_clicked.connect(self._update)
+        self.window_settings.show()
 
     def _collect_new_posts(self):
         """
@@ -886,3 +888,369 @@ class ProfileEditorWindow(QWidget):
         toolkit.set_profile(self.profile['id'], self.profile)
         self._update()
 
+class SettingsWindow(QWidget):
+    """
+    SettingsWindow class for displaying and modifying application settings.
+
+    This class provides a user interface for viewing and modifying various settings of the application.
+    Changes to settings are deferred until the user clicks the Apply button.
+    """
+    submit_clicked = pyqtSignal()
+
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Settings")
+
+        self.layout = self._make_layout()
+        self.settings = {}  # Internal dictionary to store settings
+
+        self.setLayout(self.layout)
+
+    def _make_layout(self):
+        layout = QVBoxLayout()
+
+        # Create tabs on the left side
+        tabs = self._make_tabs()
+        layout.addWidget(tabs)
+
+        button_apply = QPushButton("Apply")
+        button_apply.clicked.connect(self._apply_settings)
+
+        layout.addWidget(button_apply)
+
+        return layout
+
+    def _make_tabs(self):
+        """
+        Create tabs for displaying different settings.
+        """
+        tabs = QTabWidget()
+
+        # Add tabs with separators and buttons
+        general_tab = self._make_general_tab()
+        tabs.addTab(general_tab, "General")
+
+        analysis_tab = self._make_analysis_tab()
+        tabs.addTab(analysis_tab, "Analysis")
+
+        privacy_security_tab = self._make_privacy_security_tab()
+        tabs.addTab(privacy_security_tab, "Privacy & Security")
+
+        personalisation_tab = self._make_personalisation_tab()
+        tabs.addTab(personalisation_tab, "Personalisation")
+
+        export_sharing_tab = self._make_export_sharing_tab()
+        tabs.addTab(export_sharing_tab, "Export & Sharing")
+
+        feedback_support_tab = self._make_feedback_support_tab()
+        tabs.addTab(feedback_support_tab, "Feedback & Support")
+
+        # Set tab position to the left
+        tabs.setTabPosition(QTabWidget.West)
+
+        return tabs
+
+    def _make_general_tab(self):
+        """
+        Create widgets for the general settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add section headers
+        tab_layout.addWidget(self._make_section_header("Post Scraping"))
+
+        update_interval_spinbox = QSpinBox()
+        update_interval_spinbox.setMinimum(1000)  # 1 second minimum interval
+        update_interval_spinbox.setMaximum(86400000)  # 24 hours maximum interval
+        update_interval_spinbox.setValue(toolkit.get_config("update_interval"))
+        update_interval_spinbox.valueChanged.connect(lambda value, name="update_interval": self._update_setting(name, value))
+        tab_layout.addWidget(QLabel("Update Interval (ms):"))
+        tab_layout.addWidget(update_interval_spinbox)
+
+        n_posts_spinbox = QSpinBox()
+        n_posts_spinbox.setMinimum(1)
+        n_posts_spinbox.setMaximum(1000)
+        n_posts_spinbox.setValue(toolkit.get_config("n_posts"))
+        n_posts_spinbox.valueChanged.connect(lambda value, name="n_posts": self._update_setting(name, value))
+        tab_layout.addWidget(QLabel("Number of Posts:"))
+        tab_layout.addWidget(n_posts_spinbox)
+
+        scrape_comments_checkbox = QCheckBox("Scrape Comments")
+        scrape_comments_checkbox.setChecked(bool(toolkit.get_config("scrape_comments")))
+        scrape_comments_checkbox.stateChanged.connect(lambda state, name="scrape_comments": self._update_setting(name, state == 2))
+        tab_layout.addWidget(scrape_comments_checkbox)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_analysis_tab(self):
+        """
+        Create widgets for the analysis settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add section headers
+        tab_layout.addWidget(self._make_section_header("Text Processing"))
+
+        lowercase_checkbox = QCheckBox("Lowercase")
+        lowercase_checkbox.setChecked(bool(toolkit.get_config("lowercase")))
+        lowercase_checkbox.stateChanged.connect(lambda state, name="lowercase": self._update_setting(name, state == 2))
+        tab_layout.addWidget(lowercase_checkbox)
+
+        soup_checkbox = QCheckBox("BeautifulSoup")
+        soup_checkbox.setChecked(bool(toolkit.get_config("soup")))
+        soup_checkbox.stateChanged.connect(lambda state, name="soup": self._update_setting(name, state == 2))
+        tab_layout.addWidget(soup_checkbox)
+
+        lemmatise_checkbox = QCheckBox("Lemmatise")
+        lemmatise_checkbox.setChecked(bool(toolkit.get_config("lemmatise")))
+        lemmatise_checkbox.stateChanged.connect(lambda state, name="lemmatise": self._update_setting(name, state == 2))
+        tab_layout.addWidget(lemmatise_checkbox)
+
+        tab_layout.addWidget(self._make_section_header("Predicting"))
+
+        confidence_threshold_spinbox = QDoubleSpinBox()
+        confidence_threshold_spinbox.setMinimum(0.0)
+        confidence_threshold_spinbox.setMaximum(1.0)
+        confidence_threshold_spinbox.setSingleStep(0.05)
+        confidence_threshold_spinbox.setValue(toolkit.get_config("confidence_threshold"))
+        confidence_threshold_spinbox.valueChanged.connect(lambda value, name="confidence_threshold": self._update_setting(name, value))
+        tab_layout.addWidget(QLabel("Confidence Threshold:"))
+        tab_layout.addWidget(confidence_threshold_spinbox)
+
+        tab_layout.addWidget(self._make_section_header("Training"))
+
+        cross_validation_checkbox = QCheckBox("Cross Validation")
+        cross_validation_checkbox.setChecked(bool(toolkit.get_config("cross_validation")))
+        cross_validation_checkbox.stateChanged.connect(lambda state, name="cross_validation": self._update_setting(name, state == 2))
+        tab_layout.addWidget(cross_validation_checkbox)
+
+        tab_layout.addWidget(self._make_section_header("Graphing"))
+
+        score_weighting_checkbox = QCheckBox("Score Weighting")
+        score_weighting_checkbox.setChecked(bool(toolkit.get_config("score_weighting")))
+        score_weighting_checkbox.stateChanged.connect(lambda state, name="score_weighting": self._update_setting(name, state == 2))
+        tab_layout.addWidget(score_weighting_checkbox)
+
+        chart_ticks_spinbox = QSpinBox()
+        chart_ticks_spinbox.setMinimum(1)
+        chart_ticks_spinbox.setMaximum(20)
+        chart_ticks_spinbox.setValue(toolkit.get_config("chart_ticks"))
+        chart_ticks_spinbox.valueChanged.connect(lambda value, name="chart_ticks": self._update_setting(name, value))
+        tab_layout.addWidget(QLabel("Chart Ticks:"))
+        tab_layout.addWidget(chart_ticks_spinbox)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_privacy_security_tab(self):
+        """
+        Create widgets for the privacy and security settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add security settings
+        tab_layout.addWidget(self._make_section_header("Security Settings"))
+
+        encryption_checkbox = QCheckBox("Encryption")
+        encryption_checkbox.setChecked(bool(toolkit.get_config("encryption")))
+        encryption_checkbox.stateChanged.connect(lambda state, name="encryption": self._update_setting(name, state == 2))
+        tab_layout.addWidget(encryption_checkbox)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_personalisation_tab(self):
+        """
+        Create widgets for the personalisation settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add section headers
+        tab_layout.addWidget(self._make_section_header("Styling"))
+
+        font_button = QPushButton("Change Font")
+        font_button.clicked.connect(self._change_font)
+        tab_layout.addWidget(font_button)
+
+        main_colour_button = QPushButton("Change Main Color")
+        main_colour_button.clicked.connect(self._change_main_colour)
+        tab_layout.addWidget(main_colour_button)
+
+        accent_colour_button = QPushButton("Change Accent Color")
+        accent_colour_button.clicked.connect(self._change_accent_colour)
+        tab_layout.addWidget(accent_colour_button)
+
+        # Add section headers
+        tab_layout.addWidget(self._make_section_header("Graph Styling"))
+
+        # Add graph styling options
+        graph_colour_button = QPushButton("Change Graph Color")
+        graph_colour_button.clicked.connect(self._change_graph_colour)
+        tab_layout.addWidget(graph_colour_button)
+
+        # Add personalisation settings
+        tab_layout.addWidget(self._make_section_header("Other Personalisation"))
+
+        dummy_option_checkbox = QCheckBox("Dummy Option")
+        dummy_option_checkbox.setChecked(bool(toolkit.get_config("dummy_option")))
+        dummy_option_checkbox.stateChanged.connect(lambda state, name="dummy_option": self._update_setting(name, state == 2))
+        tab_layout.addWidget(dummy_option_checkbox)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_export_sharing_tab(self):
+        """
+        Create widgets for the export and sharing settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add export and sharing settings
+        tab_layout.addWidget(self._make_section_header("Export & Sharing"))
+
+        export_button = QPushButton("Export Data")
+        export_button.clicked.connect(self._export_data)
+        tab_layout.addWidget(export_button)
+
+        share_button = QPushButton("Share Analysis")
+        share_button.clicked.connect(self._share_analysis)
+        tab_layout.addWidget(share_button)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_feedback_support_tab(self):
+        """
+        Create widgets for the feedback and support settings tab.
+        """
+        tab_layout = QVBoxLayout()
+
+        # Add feedback and support information
+        tab_layout.addWidget(self._make_section_header("About the Creator"))
+
+        about_label = QLabel("I am the creator of this application.")
+        tab_layout.addWidget(about_label)
+
+        linkedin_link = QLabel("<a href='https://www.linkedin.com/in/alfieatkinson/'>LinkedIn Profile</a>")
+        linkedin_link.setOpenExternalLinks(True)
+        tab_layout.addWidget(linkedin_link)
+
+        tab_layout.addWidget(self._make_section_header("Contact Me"))
+
+        email_button = QPushButton("Compose Email")
+        email_button.clicked.connect(self._compose_email)
+        tab_layout.addWidget(email_button)
+
+        tab_layout.addWidget(self._make_section_header("GitHub Repository"))
+
+        github_link = QLabel("<a href='https://github.com/alfieatkinson/sentiment-analysis-tool'>GitHub Repository</a>")
+        github_link.setOpenExternalLinks(True)
+        tab_layout.addWidget(github_link)
+
+        tab_layout.addStretch()
+        tab_widget = QWidget()
+        tab_widget.setLayout(tab_layout)
+        return tab_widget
+
+    def _make_section_header(self, title):
+        """
+        Create a section header label.
+        """
+        section_label = QLabel(title)
+        section_label.setStyleSheet("font-weight: bold; color: #666; text-decoration: underline;")
+        return section_label
+
+    def _update_setting(self, name, value):
+        """
+        Update a setting in the internal dictionary.
+        """
+        self.settings[name] = value
+
+    def _apply_settings(self):
+        """
+        Apply settings when Apply button is clicked.
+        """
+        # Apply settings stored in the internal dictionary
+        for setting_name, value in self.settings.items():
+            toolkit.set_config(setting_name, value)
+
+        self.submit_clicked.emit()
+
+    def _compose_email(self):
+        """
+        Compose an email to alf.atkinson13@gmail.com.
+        """
+        # Open default email client with pre-filled details
+        import webbrowser
+        webbrowser.open("mailto:alf.atkinson13@gmail.com")
+
+    def _change_font(self):
+        """
+        Open a font selection dialog to change font.
+        """
+        # Dummy functionality to change font
+        font, ok = QFontDialog.getFont()
+        if ok:
+            print("Selected font:", font.family())
+
+    def _change_main_colour(self):
+        """
+        Open a color picker dialog to change main colour.
+        """
+        # Dummy functionality to change main colour
+        color = QColorDialog.getColor()
+        if color.isValid():
+            print("Selected main colour:", color.name())
+
+    def _change_accent_colour(self):
+        """
+        Open a color picker dialog to change accent colour.
+        """
+        # Dummy functionality to change accent colour
+        color = QColorDialog.getColor()
+        if color.isValid():
+            print("Selected accent colour:", color.name())
+
+    def _change_text_colour(self):
+        """
+        Open a color picker dialog to change text colour.
+        """
+        # Dummy functionality to change text colour
+        color = QColorDialog.getColor()
+        if color.isValid():
+            print("Selected text colour:", color.name())
+
+    def _change_graph_colour(self):
+        """
+        Open a color picker dialog to change graph colour.
+        """
+        # Dummy functionality to change graph colour
+        color = QColorDialog.getColor()
+        if color.isValid():
+            print("Selected graph colour:", color.name())
+
+    def _export_data(self):
+        """
+        Export data to a file.
+        """
+        # Dummy functionality to export data
+        print("Data exported successfully.")
+
+    def _share_analysis(self):
+        """
+        Share analysis results.
+        """
+        # Dummy functionality to share analysis
+        print("Analysis shared successfully.")

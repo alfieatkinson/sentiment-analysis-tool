@@ -12,7 +12,7 @@ from .messages import *
 from .config import *
 
 def version() -> str:
-    return 'v0.2'
+    return 'v1.0'
 
 def time() -> str:
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
