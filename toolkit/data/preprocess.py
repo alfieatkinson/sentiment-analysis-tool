@@ -129,7 +129,7 @@ def preprocess_dataset(path: str, dataset_size: int = 1600000) -> pd.DataFrame:
     toolkit.console("Dataset saved.")
 
     print()
-    print(df.describe())
+    print(df)
     print()
 
     # Load the preprocessed CSV dataset into a pandas DataFrame
