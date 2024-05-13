@@ -41,7 +41,7 @@ class RedditScraper(object):
                                client_secret=os.getenv('REDDIT_CLIENT_SECRET'), # Fetch the client secret
                                user_agent=os.getenv('REDDIT_USER_AGENT')) # Fetch the user agent
     
-    def search_subs(self, subs: dict[str, list[str]], n: int = 20) -> 'pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]':
+    def search_subs(self, subs: dict[str, list[str]], n: int = 10) -> 'pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]':
         scrape_comments = toolkit.get_config('scrape_comments')
         posts = []
         comments = []
@@ -49,9 +49,9 @@ class RedditScraper(object):
             temp_posts, temp_comments = self.search_sub(sub, search_terms, n)
             posts += temp_posts
             comments += temp_comments
-            toolkit.console(f"'{', '.join(search_terms)} in /r/{sub}\nPosts: {len(posts)}\nComments: {len(comments)}")
+            toolkit.console(f"'{', '.join(search_terms)} in /r/{sub} Posts: {len(posts)} Comments: {len(comments)}")
 
-        print(f"POSTS: {len(posts)}\nCOMMENTS: {sum(map(len, comments))}")
+        toolkit.console(f"POSTS: {len(posts)} COMMENTS: {sum(map(len, comments))}")
 
         post_attributes = []
         comment_attributes = []
@@ -73,7 +73,7 @@ class RedditScraper(object):
             return posts_df, comments_df
         return posts_df
     
-    def search_sub(self, sub: str, search_terms: list[str], n: int) -> tuple[list, list]:
+    def search_sub(self, sub: str, search_terms: list[str], n: int = 10) -> tuple[list, list]:
         toolkit.console(f"Searching posts in /r/{sub}.")
         scrape_comments = toolkit.get_config('scrape_comments')
         posts = []

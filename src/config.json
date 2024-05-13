@@ -1,1 +1,1 @@
-{"lowercase": 0, "soup": 0, "lemmatise": 0, "confidence_threshold": 0.85, "cross_validation": 1,"score_weighting": 1, "chart_ticks": 7, "scrape_comments": 1, "split_subs": 0, "update_interval": 3600000}
+{"lowercase": 0, "soup": 0, "lemmatise": 0, "confidence_threshold": 0.95, "cross_validation": 1, "score_weighting": 0, "chart_ticks": 7, "scrape_comments": 1, "split_subs": 0, "update_interval": 3600000, "n_posts": 50}

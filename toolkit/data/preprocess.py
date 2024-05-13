@@ -20,6 +20,8 @@ class TextProcessor(object):
         @param text (str): a string to be cleaned.
         @return text (str): the cleaned string.
         """
+        toolkit.console(f"Unprocessed text - {text[:128] + '...' if len(text) > 128 else text}")
+
         # If configured, make text lowercase
         if toolkit.get_config('lowercase'):
             text = text.lower()
@@ -51,6 +53,7 @@ class TextProcessor(object):
         reddit_user_mention_pattern = r'/?u/\S+' # Define the pattern for reddit user mentions
         reddit_sub_mention_pattern = r'/?r/\S+' # Define the pattern for reddit user mentions
         reddit_url_pattern = r'\[(.*?)\]\(.*?\)' # Define the pattern for reddit URLs
+        newline_pattern = r'(\r\n|\r|\n)'
 
         # Apply the patterns to the text
         text = re.sub(x_mention_pattern, 'USER', text)
@@ -59,6 +62,7 @@ class TextProcessor(object):
         text = re.sub(reddit_sub_mention_pattern, 'SUBREDDIT', text)
         text = re.sub(reddit_url_pattern, '', text)
         text = re.sub(url_pattern, '', text)
+        text = re.sub(newline_pattern, ' ', text)
 
         return text
 

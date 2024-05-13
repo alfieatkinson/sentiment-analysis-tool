@@ -6,8 +6,12 @@ import numpy as np
 import pandas as pd
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold
+
+import matplotlib.pyplot as plt
+
+import seaborn as sns
 
 import tensorflow as tf
 from transformers import BertTokenizer, TFBertForSequenceClassification
@@ -78,6 +82,8 @@ class BertModel(object):
         history = self.model.fit([X_train_encoded['input_ids'], X_train_encoded['token_type_ids'], X_train_encoded['attention_mask']], np.array(y_train),
                                 validation_data=([X_val_encoded['input_ids'], X_val_encoded['token_type_ids'], X_val_encoded['attention_mask']], np.array(y_val)),
                                 batch_size=32, epochs=3)
+        
+        return history
 
     def train(self, dataset: pd.DataFrame, path: str) -> None:
         """
@@ -90,8 +96,8 @@ class BertModel(object):
         text = dataset['text'].tolist()
         sentiment = dataset['sentiment'].tolist()
 
-        # Split the data into 95% training and 5% testing
-        X_train, X_test, y_train, y_test = train_test_split(text, sentiment, test_size = 0.05, stratify=sentiment, random_state = 0)
+        # Split the data into 80% training, 10% testing, and 10% validation
+        X_train, X_test, y_train, y_test = train_test_split(text, sentiment, test_size = 0.2, stratify=sentiment, random_state = 0)
         X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.5, stratify=y_train, random_state=0)
 
         self.new_model()
@@ -115,12 +121,16 @@ class BertModel(object):
         if toolkit.get_config('cross_validation'):
             self.cross_validate(dataset)
         else:
-            self.fit_model(X_train_encoded, y_train, X_val_encoded, y_val)
+            history = self.fit_model(X_train_encoded, y_train, X_val_encoded, y_val)
+            self.plot_training_history(history)
         
         toolkit.console(f"Finished training in {round(time.time()-t)} seconds.\n")
 
         # Evaluate the model on the test set
-        self.test(X_test_encoded, y_test)
+        test_loss, test_accuracy, pred_labels, actual_labels = self.test(X_test_encoded, y_test)
+
+        # Plot confusion matrix
+        self.plot_confusion_matrix(actual_labels, pred_labels)
 
         # Save the trained model
         self.save_model(path, force=True)
@@ -140,11 +150,16 @@ class BertModel(object):
         # Initialize lists to store results
         test_losses = []
         test_accuracies = []
+        train_accuracies = []
         pred_labels_list = []
         actual_labels_list = []
 
         # Perform cross-validation
+        k = 0
         for train_index, val_index in kf.split(text):
+            t = time.time() # Start timer
+            toolkit.console(f"Started fold {k}...")
+
             X_train, X_val = [text[i] for i in train_index], [text[i] for i in val_index]
             y_train, y_val = [sentiment[i] for i in train_index], [sentiment[i] for i in val_index]
 
@@ -153,7 +168,7 @@ class BertModel(object):
             X_val_encoded = self.tokenise(X_val)
 
             # Fit and evaluate the model
-            self.fit_model(X_train_encoded, y_train, X_val_encoded, y_val)
+            history = self.fit_model(X_train_encoded, y_train, X_val_encoded, y_val)
 
             # Evaluate the model
             test_loss, test_accuracy, pred_labels, actual_labels = self.test(X_val_encoded, y_val)
@@ -161,8 +176,12 @@ class BertModel(object):
             # Append results to lists
             test_losses.append(test_loss)
             test_accuracies.append(test_accuracy)
+            train_accuracies.append(history.history['accuracy'][-1])  # Get the last accuracy from training history
             pred_labels_list.extend(pred_labels)
             actual_labels_list.extend(actual_labels)
+
+            toolkit.console(f"Finished fold {k} in {round(time.time()-t)} seconds.\n")
+            k += 1
 
         # Calculate average metrics
         avg_test_loss = np.mean(test_losses)
@@ -175,6 +194,15 @@ class BertModel(object):
         # Print classification report
         toolkit.console("Classification Report:")
         print(classification_report(actual_labels_list, pred_labels_list))
+
+        # Plot train accuracy vs test accuracy
+        plt.plot(train_accuracies, label='Train Accuracy')
+        plt.plot(test_accuracies, label='Test Accuracy')
+        plt.title('Train Accuracy vs Test Accuracy')
+        plt.xlabel('Fold')
+        plt.ylabel('Accuracy')
+        plt.legend()
+        plt.show()
 
     def test(self, X_test_encoded: dict, y_test: list[int]) -> tuple[float, float, list[str], list[str]]:
         """
@@ -246,3 +274,41 @@ class BertModel(object):
         toolkit.console(f"Finished predicting in {round(time.time()-t)} seconds.\n")
 
         return pred_labels # Return the labels
+    
+    def plot_training_history(self, history):
+        """
+        Plot training and validation accuracy and loss.
+        @param history: Training history object returned by model.fit().
+        """
+        # Plot training & validation accuracy values
+        plt.plot(history.history['accuracy'])
+        plt.plot(history.history['val_accuracy'])
+        plt.title('Model accuracy')
+        plt.ylabel('Accuracy')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Validation'], loc='upper left')
+        plt.show()
+
+        # Plot training & validation loss values
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Validation'], loc='upper left')
+        plt.show()
+
+    def plot_confusion_matrix(self, y_true, y_pred):
+        """
+        Plot confusion matrix.
+        @param y_true: True labels.
+        @param y_pred: Predicted labels.
+        """
+        labels = ['Negative', 'Positive']
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(cm, annot=True, cmap='Blues', fmt='g', xticklabels=labels, yticklabels=labels)
+        plt.xlabel('Predicted')
+        plt.ylabel('True')
+        plt.title('Confusion Matrix')
+        plt.show()

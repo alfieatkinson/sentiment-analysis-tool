@@ -83,11 +83,10 @@ class Analyser(object):
             canvas.axes.set_title(title)
             return
 
-        total_positive = abs(df[df['Sentiment'] == 'Positive']['SentimentScore'].sum())
-        total_negative = abs(df[df['Sentiment'] == 'Negative']['SentimentScore'].sum())
+        sentiment_counts = df['Sentiment'].value_counts()
 
-        labels = ['Positive', 'Negative']
-        sizes = [total_positive, total_negative]
+        labels = sentiment_counts.index.tolist()
+        sizes = sentiment_counts.values.tolist()
 
         canvas.axes.set_title(title)
         canvas.axes.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
