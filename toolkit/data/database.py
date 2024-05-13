@@ -18,7 +18,7 @@ class PostCollector(object):
     """
     def __init__(self, model, scraper, profile: dict[str, any]) -> None:
         """
-        Initialize the PostCollector object.
+        initialise the PostCollector object.
 
         Args:
             model: The sentiment analysis model.
@@ -110,18 +110,6 @@ class PostCollector(object):
         else:
             new_posts = self.scraper.search_subs(subs, n=n) # Scrape the subreddits for new posts
             print(new_posts)
-
-        if not True:
-            latest_post = self.posts['Date/Time'].max()
-            latest_comment = self.comments['Date/Time'].max()
-
-            # Filter out posts and comments that are already in self.posts and self.comments
-            new_posts = new_posts[new_posts['Date/Time'] > latest_post]
-            new_posts = new_posts[~new_posts['ID'].isin(self.posts['ID'])]
-
-            if scrape_comments:
-                new_comments = new_comments[new_comments['Date/Time'] > latest_comment]
-                new_comments = new_comments[~new_comments['ID'].isin(self.comments['ID'])]
 
         all_texts = []
 

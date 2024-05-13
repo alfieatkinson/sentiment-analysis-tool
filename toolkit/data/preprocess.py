@@ -10,15 +10,27 @@ import pandas as pd
 import toolkit
 
 class TextProcessor(object):
+    """
+    Class for processing text data.
 
+    Attributes:
+        lemmatiser (WordNetLemmatizer): The lemmatiser for word lemmatisation.
+    """
     def __init__(self):
+        """
+        Initialise the TextProcessor object.
+        """
         self.lemmatiser = WordNetLemmatizer() # Create lemmatiser and stemmer
 
     def clean(self, text: str) -> str:
         """
         Cleans the given text based on configured settings.
-        @param text (str): a string to be cleaned.
-        @return text (str): the cleaned string.
+
+        Args:
+            text (str): The text to be cleaned.
+
+        Returns:
+            str: The cleaned text.
         """
         toolkit.console(f"Unprocessed text - {text[:128] + '...' if len(text) > 128 else text}")
 
@@ -42,10 +54,13 @@ class TextProcessor(object):
 
     def preprocess(self, text: str) -> str:
         """
-        Removes user and subreddit mentions ('u/user' and /r/subreddit),
-        removes urls, and replaces '&amp;' with &.
-        @param text (str): a string to be processed.
-        @return text (str): the processed string.
+        Preprocesses the text by removing user and subreddit mentions, URLs, and special characters.
+
+        Args:
+            text (str): The text to be preprocessed.
+
+        Returns:
+            str: The preprocessed text.
         """
         x_mention_pattern = r'@\S{4,}'
         ampersand_pattern = r'&amp;' # Define the pattern for correcting '&amp;' to '&'
@@ -68,9 +83,13 @@ class TextProcessor(object):
 
     def lemmatise(self, text: str) -> str:
         """
-        Applies a word lemmatiser and stemmer to the given text.
-        @param text (str): a string to be lemmatised and stemmed.
-        @return text (str): the lemmatised stemmed text.
+        Lemmatises and stems the given text.
+
+        Args:
+            text (str): The text to be lemmatised and stemmed.
+
+        Returns:
+            str: The lemmatised and stemmed text.
         """
         lemmatised = '' # Initialise empty string to add lemmatised words to
         
@@ -84,8 +103,12 @@ class TextProcessor(object):
     def soup(self, text: str) -> str:
         """
         Applies BeautifulSoup to the given text.
-        @param text (str): a string to become soup.
-        @return text (str): the soupy text.
+
+        Args:
+            text (str): The text to become soup.
+
+        Returns:
+            str: The soupy text.
         """
         soup = BeautifulSoup(text, 'html.parser') # Create soup
         soup_pattern = r'\[[^]]*\]'
@@ -96,10 +119,14 @@ class TextProcessor(object):
 
 def preprocess_dataset(path: str, dataset_size: int = 1600000) -> pd.DataFrame:
     """
-    Preprocess the CSV file by shuffling rows, replacing label values, and load it into a pandas DataFrame.
-    @param path: Relative path to the CSV file.
-    @param dataset_size: Size of the dataset to load.
-    @return: Pandas DataFrame containing the preprocessed dataset.
+    Preprocesses the CSV file by shuffling rows, replacing label values, and loading it into a pandas DataFrame.
+
+    Args:
+        path (str): Relative path to the CSV file.
+        dataset_size (int): Size of the dataset to load.
+
+    Returns:
+        pd.DataFrame: Pandas DataFrame containing the preprocessed dataset.
     """
     # Define the paths
     input_path = path + 'dataset.csv'

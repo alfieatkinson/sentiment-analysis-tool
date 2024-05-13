@@ -8,7 +8,18 @@ import pandas as pd
 import toolkit
 
 class XScraper(object):
+    """
+    Class for scraping data from external sources.
+    Non-functional due to API limitations.
+
+    Attributes:
+        auth: OAuth handler for Twitter.
+        api: Tweepy API instance for accessing Twitter data.
+    """
     def __init__(self):
+        """
+        initialises the XScraper class.
+        """
         try:
             # Create the OAuth handler
             self.auth = tweepy.OAuth1UserHandler(os.getenv('TWITTER_CONSUMER_KEY'), # Fetch the consumer key
@@ -21,6 +32,15 @@ class XScraper(object):
         self.api = tweepy.API(self.auth, wait_on_rate_limit=True) # Create API instance
 
     def search(self, query: str) -> pd.DataFrame:
+        """
+        Searches Twitter for tweets based on the given query.
+
+        Args:
+            query (str): The search query.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the search results.
+        """
         tweets = self.api.search_tweets(q=query)
         attributes = [[tweet.created_at, tweet.text, tweet.favorite_count] for tweet in tweets]
         columns = ['Date', 'Text', 'Likes']
@@ -28,6 +48,16 @@ class XScraper(object):
         return pd.DataFrame(attributes, columns=columns)
     
     def search_user(self, username: str, n: int) -> pd.DataFrame:
+        """
+        Searches Twitter for tweets by a specific user.
+
+        Args:
+            username (str): The Twitter username.
+            n (int): The number of tweets to retrieve.
+
+        Returns:
+            pd.DataFrame: DataFrame containing the search results.
+        """
         tweets = self.api.user_timeline(screen_name=username, count=n)
         attributes = [[tweet.created_at, tweet.text, tweet.favorite_count] for tweet in tweets]
         columns = ['Date', 'Text', 'Likes']
@@ -36,12 +66,31 @@ class XScraper(object):
     
 
 class RedditScraper(object):
+    """
+    Class for scraping data from Reddit.
+
+    Attributes:
+        api: Reddit API instance for accessing Reddit data.
+    """
     def __init__(self):
+        """
+        initialises the RedditScraper class.
+        """
         self.api = praw.Reddit(client_id=os.getenv('REDDIT_CLIENT_ID'), # Fetch the client ID
                                client_secret=os.getenv('REDDIT_CLIENT_SECRET'), # Fetch the client secret
                                user_agent=os.getenv('REDDIT_USER_AGENT')) # Fetch the user agent
     
     def search_subs(self, subs: dict[str, list[str]], n: int = 10) -> 'pd.DataFrame | tuple[pd.DataFrame, pd.DataFrame]':
+        """
+        Searches Reddit for posts and comments in specified subreddits.
+
+        Args:
+            subs (dict): Dictionary containing subreddit names and search terms.
+            n (int): The number of posts to retrieve per subreddit.
+
+        Returns:
+            pd.DataFrame or tuple[pd.DataFrame, pd.DataFrame]: DataFrame(s) containing the search results.
+        """
         scrape_comments = toolkit.get_config('scrape_comments')
         posts = []
         comments = []
@@ -74,6 +123,17 @@ class RedditScraper(object):
         return posts_df
     
     def search_sub(self, sub: str, search_terms: list[str], n: int = 10) -> tuple[list, list]:
+        """
+        Searches Reddit for posts and comments in a specific subreddit.
+
+        Args:
+            sub (str): The subreddit to search.
+            search_terms (list): List of search terms.
+            n (int): The number of posts to retrieve.
+
+        Returns:
+            tuple[list, list]: Lists of posts and comments.
+        """
         toolkit.console(f"Searching posts in /r/{sub}.")
         scrape_comments = toolkit.get_config('scrape_comments')
         posts = []
@@ -98,6 +158,16 @@ class RedditScraper(object):
         return posts, comments
     
     def search_comments(self, post, limit: int = 5) -> list:
+        """
+        Searches for comments in a Reddit post.
+
+        Args:
+            post: The Reddit post object.
+            limit (int): The maximum number of comments to retrieve.
+
+        Returns:
+            list: List of comments.
+        """
         toolkit.console(f"Searching comments in post {post.name}.")
         post_comments = []
         post.comment_limit = limit

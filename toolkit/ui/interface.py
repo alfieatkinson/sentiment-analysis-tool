@@ -87,7 +87,7 @@ class MplCanvas(FigureCanvas):
     """
     def __init__(self, parent = None, width: int = 5, height: int = 5, dpi: int = 100):
         """
-        Initialize the matplotlib canvas.
+        initialise the matplotlib canvas.
 
         Args:
             parent: Parent widget.
@@ -107,7 +107,7 @@ class MainWindow(QMainWindow):
     """
     def __init__(self, *args, **kwargs):
         """
-        Initialize the main window.
+        initialise the main window.
         """
         super(MainWindow, self).__init__(*args, **kwargs)
 
@@ -687,7 +687,7 @@ class ProfileEditorWindow(QWidget):
 
     def __init__(self, profile: dict[str, any] = {}):
         """
-        Initialize the profile editor window.
+        initialise the profile editor window.
 
         Args:
             profile (dict): Profile information.

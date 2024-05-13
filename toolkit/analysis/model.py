@@ -19,12 +19,32 @@ from transformers import BertTokenizer, TFBertForSequenceClassification
 import toolkit
 
 class BertModel(object):
+    """
+    Class for sentiment analysis using BERT model.
+
+    Attributes:
+        tokeniser: BERT tokenizer for tokenizing input text.
+        model: BERT model for sentiment classification.
+    """
     def __init__(self) -> None:
+        """
+        initialises the BERT model.
+        """
         self.tokeniser, self.model = None, None
         self.load_model(toolkit.get_dir() + '/models/')
 
     # Save the tokeniser and model
     def save_model(self, path: str, force: bool = False) -> bool:
+        """
+        Saves the tokeniser and model to the specified path.
+
+        Args:
+            path (str): Path to save the model.
+            force (bool, optional): Whether to overwrite existing files. Defaults to False.
+
+        Returns:
+            bool: True if the model is saved successfully, False otherwise.
+        """
         if not force and (os.path.exists(path + '/tokeniser') or os.path.exists(path + '/model')):
             return False
         try:
@@ -36,6 +56,12 @@ class BertModel(object):
 
     # Load the tokeniser and model
     def load_model(self, path: str) -> None:
+        """
+        Loads the tokeniser and model from the specified path.
+
+        Args:
+            path (str): Path to load the model from.
+        """
         try:
             self.tokeniser = BertTokenizer.from_pretrained(path + '/tokeniser') # Load tokeniser
             self.model = TFBertForSequenceClassification.from_pretrained(path + '/model') # Load model
@@ -48,16 +74,20 @@ class BertModel(object):
         """
         Initialise a new tokeniser and model.
         """
-        # Initialize a new tokeniser
+        # initialise a new tokeniser
         self.tokeniser = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-        # Initialize a new model
+        # initialise a new model
         self.model = TFBertForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2)
 
     def tokenise(self, text: list[str]) -> dict:
         """
-        Tokenise and encode the data using BERT tokeniser.
-        @param text: List of strings to be tokenised.
-        @return: Dictionary containing tokenised inputs.
+        Tokenises and encodes the data using BERT tokeniser.
+
+        Args:
+            text (list[str]): List of strings to be tokenised.
+
+        Returns:
+            dict: Dictionary containing tokenised inputs.
         """
         if self.tokeniser is None:
             self.new_model()
@@ -66,11 +96,13 @@ class BertModel(object):
 
     def fit_model(self, X_train_encoded, y_train, X_val_encoded, y_val) -> None:
         """
-        Fit and evaluate the BERT model.
-        @param X_train_encoded: Dictionary containing tokenised inputs for training data.
-        @param y_train: List of labels for training data.
-        @param X_val_encoded: Dictionary containing tokenised inputs for validation data.
-        @param y_val: List of labels for validation data.
+        Fits and evaluates the BERT model.
+
+        Args:
+            X_train_encoded: Dictionary containing tokenised inputs for training data.
+            y_train: List of labels for training data.
+            X_val_encoded: Dictionary containing tokenised inputs for validation data.
+            y_val: List of labels for validation data.
         """
         # Compile the model with optimiser, loss function, and metrics
         optimiser = tf.keras.optimizers.Adam(learning_rate=2e-5)
@@ -87,8 +119,11 @@ class BertModel(object):
 
     def train(self, dataset: pd.DataFrame, path: str) -> None:
         """
-        Train the BERT model.
-        @param dataset: DataFrame containing 'text' and 'sentiment' columns.
+        Trains the BERT model.
+
+        Args:
+            dataset (pd.DataFrame): DataFrame containing 'text' and 'sentiment' columns.
+            path (str): Path to save the trained model.
         """
         t = time.time() # Start timer
         toolkit.console("Started training...")
@@ -137,9 +172,11 @@ class BertModel(object):
 
     def cross_validate(self, dataset: pd.DataFrame, n_splits: int = 5) -> None:
         """
-        Perform cross-validation on the dataset.
-        @param dataset: DataFrame containing 'text' and 'sentiment' columns.
-        @param n_splits: Number of splits for cross-validation.
+        Performs cross-validation on the dataset.
+
+        Args:
+            dataset (pd.DataFrame): DataFrame containing 'text' and 'sentiment' columns.
+            n_splits (int, optional): Number of splits for cross-validation. Defaults to 5.
         """
         text = dataset['text'].tolist()
         sentiment = dataset['sentiment'].tolist()
@@ -147,7 +184,7 @@ class BertModel(object):
         # Define cross-validation splitter
         kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
-        # Initialize lists to store results
+        # initialise lists to store results
         test_losses = []
         test_accuracies = []
         train_accuracies = []
@@ -206,10 +243,14 @@ class BertModel(object):
 
     def test(self, X_test_encoded: dict, y_test: list[int]) -> tuple[float, float, list[str], list[str]]:
         """
-        Evaluate the BERT model.
-        @param X_test_encoded: Dictionary containing tokenised inputs for test data.
-        @param y_test: List of labels for test data.
-        @return: Test loss, test accuracy, predicted labels, and actual labels.
+        Evaluates the BERT model.
+
+        Args:
+            X_test_encoded (dict): Dictionary containing tokenised inputs for test data.
+            y_test (list[int]): List of labels for test data.
+
+        Returns:
+            tuple: Test loss, test accuracy, predicted labels, and actual labels.
         """
         if self.model is None:
             raise ValueError("Model not initialised. Load or initialise the model first.")
@@ -241,9 +282,13 @@ class BertModel(object):
 
     def predict(self, text: list[str]) -> str:
         """
-        Predict the sentiment of text using the trained BERT model.
-        @param text: List of strings to predict sentiment for.
-        @return: Predicted sentiment label.
+        Predicts the sentiment of text using the trained BERT model.
+
+        Args:
+            text (list[str]): List of strings to predict sentiment for.
+
+        Returns:
+            str: Predicted sentiment label.
         """
         if self.model is None or self.tokeniser is None:
             raise ValueError("Model or tokeniser not initialised. Load or initialise them first.")
@@ -277,8 +322,10 @@ class BertModel(object):
     
     def plot_training_history(self, history):
         """
-        Plot training and validation accuracy and loss.
-        @param history: Training history object returned by model.fit().
+        Plots training and validation accuracy and loss.
+
+        Args:
+            history: Training history object returned by model.fit().
         """
         # Plot training & validation accuracy values
         plt.plot(history.history['accuracy'])
@@ -300,9 +347,11 @@ class BertModel(object):
 
     def plot_confusion_matrix(self, y_true, y_pred):
         """
-        Plot confusion matrix.
-        @param y_true: True labels.
-        @param y_pred: Predicted labels.
+        Plots confusion matrix.
+
+        Args:
+            y_true: True labels.
+            y_pred: Predicted labels.
         """
         labels = ['Negative', 'Positive']
         cm = confusion_matrix(y_true, y_pred, labels=labels)
