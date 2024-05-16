@@ -191,7 +191,6 @@ class PostCollector(object):
         else:
             toolkit.alert("Could not scrape new posts.")
             
-
     def show_post(self, ID: str, show_comments: bool = False) -> None:
         """
         Display information about a specific post and its comments.

@@ -131,9 +131,13 @@ class BertModel(object):
         text = dataset['text'].tolist()
         sentiment = dataset['sentiment'].tolist()
 
+        train_ratio = 0.8
+        test_ratio = 0.1
+        val_ratio = 0.1
+
         # Split the data into 80% training, 10% testing, and 10% validation
-        X_train, X_test, y_train, y_test = train_test_split(text, sentiment, test_size = 0.2, stratify=sentiment, random_state = 0)
-        X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=0.5, stratify=y_train, random_state=0)
+        X_train, X_test, y_train, y_test = train_test_split(text, sentiment, test_size=1 - train_ratio, stratify=sentiment, random_state = 42)
+        X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=test_ratio/(test_ratio + val_ratio), stratify=y_test, random_state=42)
 
         self.new_model()
 
@@ -170,7 +174,7 @@ class BertModel(object):
         # Save the trained model
         self.save_model(path, force=True)
 
-    def cross_validate(self, dataset: pd.DataFrame, n_splits: int = 5) -> None:
+    def cross_validate(self, dataset: pd.DataFrame, n_splits: int = 3) -> None:
         """
         Performs cross-validation on the dataset.
 
@@ -280,7 +284,7 @@ class BertModel(object):
 
         return test_loss, test_accuracy, pred_labels, actual_labels
 
-    def predict(self, text: list[str]) -> str:
+    def predict(self, text: list[str]) -> list[str]:
         """
         Predicts the sentiment of text using the trained BERT model.
 

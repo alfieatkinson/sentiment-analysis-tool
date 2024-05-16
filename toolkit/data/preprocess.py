@@ -62,22 +62,29 @@ class TextProcessor(object):
         Returns:
             str: The preprocessed text.
         """
-        x_mention_pattern = r'@\S{4,}'
+        x_mention_pattern = r'@\S{4,}' # Define the pattern for x user mentions
         ampersand_pattern = r'&amp;' # Define the pattern for correcting '&amp;' to '&'
         url_pattern = r'((http://)[^ ]*|(https://)[^ ]*|( www\.)[^ ]*)' # Define the pattern for URLs
         reddit_user_mention_pattern = r'/?u/\S+' # Define the pattern for reddit user mentions
-        reddit_sub_mention_pattern = r'/?r/\S+' # Define the pattern for reddit user mentions
-        reddit_url_pattern = r'\[(.*?)\]\(.*?\)' # Define the pattern for reddit URLs
-        newline_pattern = r'(\r\n|\r|\n)'
+        reddit_sub_mention_pattern = r'/?r/\S+' # Define the pattern for subreddit mentions
+        newline_pattern = r'(\r\n|\r|\n)' # Define the pattern for newlines
+
+        reddit_url_match = r'/\[.*?(?=\]\((.*?)\))/g' # Define the pattern for reddit URLs
+        reddit_url_replace = r'/\[.*?\]\(.*?\)/g' # Define the replacement for reddit URLs
 
         # Apply the patterns to the text
-        text = re.sub(x_mention_pattern, 'USER', text)
-        text = re.sub(ampersand_pattern, '&', text)
-        text = re.sub(reddit_user_mention_pattern, 'USER', text)
-        text = re.sub(reddit_sub_mention_pattern, 'SUBREDDIT', text)
-        text = re.sub(reddit_url_pattern, '', text)
-        text = re.sub(url_pattern, '', text)
-        text = re.sub(newline_pattern, ' ', text)
+        text = re.sub(x_mention_pattern, 'USER', text) # @user -> USER
+        text = re.sub(ampersand_pattern, '&', text) # &amp; -> &
+        text = re.sub(reddit_user_mention_pattern, 'USER', text) # /u/user or u/user -> USER
+        text = re.sub(reddit_sub_mention_pattern, 'SUBREDDIT', text) # /r/sub or r/sub -> SUBREDDIT
+        text = re.sub(url_pattern, 'URL', text) # https://link or http://link -> URL
+        text = re.sub(newline_pattern, ' ', text) # \\n -> ' '
+
+        # Find all tags (text inside square brackets)
+        tags = [match.group(1) for match in re.finditer(r'\[(.*?)(?=\]\(.*?\))', text)]
+
+        # Replace all markdown links with the extracted tags
+        text = re.sub(r'\[.*?\]\(.*?\)', lambda match: tags.pop(0), text) # [name](link) -> name
 
         return text
 
@@ -134,13 +141,15 @@ def preprocess_dataset(path: str, dataset_size: int = 1600000) -> pd.DataFrame:
 
     # Read the preprocessed CSV file into a DataFrame
     toolkit.console(f"Loading dataset from {input_path}...")
-    df = pd.read_csv(input_path, names=['sentiment', 'timestamp', 'datestring', 'N/A', 'user', 'text'], encoding='latin-1')
+
+    # Read using ISO-8859-1 encoding due to limitations with utf-8
+    df = pd.read_csv(input_path, names=['sentiment', 'timestamp', 'datestring', 'N/A', 'user', 'text'], encoding='ISO-8859-1')
     toolkit.console(f"Dataset loaded.")
 
     # Replace all label values of "4" with "1"
     df['sentiment'] = df['sentiment'].replace(4, 1)
 
-    # Keep only the 'tweet' and 'score' columns
+    # Keep only the 'tweet' and 'sentiment' columns
     df = df[['text', 'sentiment']]
 
     # Process the text

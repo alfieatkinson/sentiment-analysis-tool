@@ -141,23 +141,31 @@ class RedditScraper(object):
         try:
             if search_terms:
                 for search_term in search_terms:
+                    k = 0
                     for post in self.api.subreddit(sub).search(search_term):
+                        if k >= n:
+                            break
                         posts.append(post)
                         if scrape_comments:
                             post.comment_sort = 'hot'
                             comments.append(self.search_comments(post))
+                        k += 1
             else:
+                k = 0
                 for post in self.api.subreddit(sub).hot(limit=n):
+                    if k >= n:
+                        break
                     posts.append(post)
                     if scrape_comments:
                         post.comment_sort = 'hot'
                         comments.append(self.search_comments(post))
+                    k += 1
         except Exception as e:
             toolkit.error(f"Error scraping subreddit: {sub}. {e}.")
 
         return posts, comments
     
-    def search_comments(self, post, limit: int = 5) -> list:
+    def search_comments(self, post, n: int = 5) -> list:
         """
         Searches for comments in a Reddit post.
 
@@ -170,8 +178,11 @@ class RedditScraper(object):
         """
         toolkit.console(f"Searching comments in post {post.name}.")
         post_comments = []
-        post.comment_limit = limit
         post.comments.replace_more(limit=0) # Remove all MoreComments
+        k = 0
         for comment in post.comments:
+            if k >= n:
+                break
             post_comments.append(comment)
+            k += 1
         return post_comments

@@ -138,6 +138,7 @@ class MainWindow(QMainWindow):
         self.font_heading.setBold(True)
 
         self.window_profile_editor = None
+        self.window_settings = None
 
         self.setWindowTitle("Sentiment Analysis Tool") # Set the title of the window
 
@@ -195,6 +196,11 @@ class MainWindow(QMainWindow):
         button_edit_brand_profile.setStatusTip("Edits the current brand profile.")
         button_edit_brand_profile.triggered.connect(self._edit_brand_profile)
 
+        # Button to train new model
+        button_train = QAction("Re-Train Model", self)
+        button_train.setStatusTip("Trains a new model.")
+        button_train.triggered.connect(self._train_model)
+
         # Button to open settings window
         button_settings = QAction("Settings", self)
         button_settings.setStatusTip("Opens settings window.")
@@ -203,6 +209,7 @@ class MainWindow(QMainWindow):
         file_menu = menu.addMenu("&File")
         file_menu.addAction(button_new_brand_profile)
         file_menu.addAction(button_edit_brand_profile)
+        file_menu.addAction(button_train)
         menu.addAction(button_settings)
 
     def _make_layout(self):
