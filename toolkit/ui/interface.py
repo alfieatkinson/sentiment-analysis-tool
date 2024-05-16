@@ -10,6 +10,8 @@ matplotlib.use('QtAgg')
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
+import pandas as pd
+
 from datetime import datetime, timedelta
 
 import traceback, sys
@@ -680,7 +682,8 @@ class MainWindow(QMainWindow):
         """
         Train the sentiment analysis model.
         """
-        worker = Worker(self.model.train)
+        df = pd.read_csv(toolkit.get_dir() + '/datasets/sentiment140/processed-dataset.csv', nrows=5000, keep_default_na=False)
+        worker = Worker(lambda: self.model.train(df, toolkit.get_dir() + '/models/'))
         worker.signals.finished.connect(self._update)
         self.threadpool.start(worker)
 
