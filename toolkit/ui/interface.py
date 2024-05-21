@@ -3,7 +3,6 @@ import os
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
 from PyQt6.QtCore import *
-from superqt import QCollapsible
 
 import matplotlib
 matplotlib.use('QtAgg')
@@ -426,6 +425,7 @@ class MainWindow(QMainWindow):
 
         for comment in comments:
             layout.addLayout(self._make_comment_row_layout(comment))  # Add comment layout
+            layout.addWidget(self._make_full_separator_line())  # Add full separator line after comment info
 
         return layout
 
@@ -485,8 +485,8 @@ class MainWindow(QMainWindow):
         Create a full separator line.
         """
         line = QFrame()
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Sunken)
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
         return line
 
     def _make_tabs(self):
@@ -563,7 +563,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime.now().timestamp()
 
         self._update()
-        print("Time period set to day.")
+        print(f"Time period set to day: {datetime.fromtimestamp(self.data_start_date)} to {datetime.fromtimestamp(self.data_end_date)}.")
 
     def _time_period_week(self):
         """
@@ -573,7 +573,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime.now().timestamp()
 
         self._update()
-        print("Time period set to week.")
+        print(f"Time period set to week: {datetime.fromtimestamp(self.data_start_date)} to {datetime.fromtimestamp(self.data_end_date)}.")
 
     def _time_period_month(self):
         """
@@ -583,7 +583,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime.now().timestamp()
 
         self._update()
-        print("Time period set to month.")
+        print(f"Time period set to month: {datetime.fromtimestamp(self.data_start_date)} to {datetime.fromtimestamp(self.data_end_date)}.")
 
     def _time_period_year(self):
         """
@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime.now().timestamp()
 
         self._update()
-        print("Time period set to year.")
+        print(f"Time period set to year: {datetime.fromtimestamp(self.data_start_date)} to {datetime.fromtimestamp(self.data_end_date)}.")
 
     def _time_period_alltime(self):
         """
@@ -603,7 +603,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime.now().timestamp()
 
         self._update()
-        print("Time period set to alltime.")
+        print(f"Time period set to alltime: {datetime.fromtimestamp(self.data_start_date)} to {datetime.fromtimestamp(self.data_end_date)}.")
 
     def _set_dates(self, selector_from: QDateEdit, selector_to: QDateEdit) -> None:
         """
@@ -620,6 +620,7 @@ class MainWindow(QMainWindow):
         self.data_end_date = datetime(end_date.year, end_date.month, end_date.day).timestamp()
 
         self._update()
+        print(f"Time period set to: {self.data_start_date} to {self.data_end_date}.")
 
     def _split_subs(self, state: bool):
         """
@@ -682,7 +683,7 @@ class MainWindow(QMainWindow):
         """
         Train the sentiment analysis model.
         """
-        df = pd.read_csv(toolkit.get_dir() + '/datasets/sentiment140/processed-dataset.csv', nrows=5000, keep_default_na=False)
+        df = pd.read_csv(toolkit.get_dir() + '/datasets/sentiment140/processed-dataset.csv', nrows=toolkit.get_config("training_rows"), keep_default_na=False)
         worker = Worker(lambda: self.model.train(df, toolkit.get_dir() + '/models/'))
         worker.signals.finished.connect(self._update)
         self.threadpool.start(worker)
@@ -881,6 +882,9 @@ class ProfileEditorWindow(QWidget):
             search_terms (str): Search terms.
         """
         search_terms_list = [search_term.strip() for search_term in search_terms.split(',')]
+        if len(search_terms_list) == 1:
+            if search_terms_list[0] == "":
+                search_terms_list = []
         try:
             self.profile['subs'][name] = search_terms_list
             self._update()
@@ -957,7 +961,7 @@ class SettingsWindow(QWidget):
         tabs.addTab(feedback_support_tab, "Feedback & Support")
 
         # Set tab position to the left
-        tabs.setTabPosition(QTabWidget.West)
+        tabs.setTabPosition(QTabWidget.TabPosition.West)
 
         return tabs
 
@@ -1037,6 +1041,14 @@ class SettingsWindow(QWidget):
         cross_validation_checkbox.setChecked(bool(toolkit.get_config("cross_validation")))
         cross_validation_checkbox.stateChanged.connect(lambda state, name="cross_validation": self._update_setting(name, state == 2))
         tab_layout.addWidget(cross_validation_checkbox)
+
+        training_rows_spinbox = QSpinBox()
+        training_rows_spinbox.setMinimum(100)  
+        training_rows_spinbox.setMaximum(1600000)  
+        training_rows_spinbox.setValue(toolkit.get_config("training_rows"))
+        training_rows_spinbox.valueChanged.connect(lambda value, name="training_rows": self._update_setting(name, value))
+        tab_layout.addWidget(QLabel("Training Rows:"))
+        tab_layout.addWidget(training_rows_spinbox)
 
         tab_layout.addWidget(self._make_section_header("Graphing"))
 

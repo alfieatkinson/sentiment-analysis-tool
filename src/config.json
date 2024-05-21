@@ -1,1 +1,1 @@
-{"lowercase": 0, "soup": 0, "lemmatise": 0, "confidence_threshold": 0.95, "cross_validation": true, "score_weighting": true, "chart_ticks": 7, "scrape_comments": 1, "split_subs": 0, "update_interval": 3600000, "n_posts": 50, "encryption": 0, "dummy_option": 0}
+{"lowercase": 0, "soup": 0, "lemmatise": 0, "confidence_threshold": 0.95, "cross_validation": true, "score_weighting": false, "chart_ticks": 7, "scrape_comments": 1, "split_subs": 0, "update_interval": 3600000, "n_posts": 100, "encryption": 0, "dummy_option": false, "training_rows": 5000}

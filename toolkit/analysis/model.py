@@ -161,7 +161,7 @@ class BertModel(object):
             self.cross_validate(dataset)
         else:
             history = self.fit_model(X_train_encoded, y_train, X_val_encoded, y_val)
-            self.plot_training_history(history)
+            #self.plot_training_history(history)
         
         toolkit.console(f"Finished training in {round(time.time()-t)} seconds.\n")
 
@@ -169,7 +169,7 @@ class BertModel(object):
         test_loss, test_accuracy, pred_labels, actual_labels = self.test(X_test_encoded, y_test)
 
         # Plot confusion matrix
-        self.plot_confusion_matrix(actual_labels, pred_labels)
+        #self.plot_confusion_matrix(actual_labels, pred_labels)
 
         # Save the trained model
         self.save_model(path, force=True)
@@ -243,7 +243,7 @@ class BertModel(object):
         plt.xlabel('Fold')
         plt.ylabel('Accuracy')
         plt.legend()
-        plt.show()
+        #plt.show()
 
     def test(self, X_test_encoded: dict, y_test: list[int]) -> tuple[float, float, list[str], list[str]]:
         """

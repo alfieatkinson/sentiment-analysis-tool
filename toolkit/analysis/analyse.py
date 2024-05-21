@@ -77,7 +77,7 @@ class Analyser(object):
         
         return df
 
-    def generate_line(self, canvas: FigureCanvas, title: str, labels: tuple[str, str], start_date: float, end_date: float) -> None:
+    def generate_line(self, canvas: FigureCanvas, title: str, labels: tuple[str, str], start_date: float = None, end_date: float = None) -> None:
         """
         Generates a line plot.
 
@@ -88,7 +88,7 @@ class Analyser(object):
             start_date (float): Start date for data selection.
             end_date (float): End date for data selection.
         """
-        df = self._trim_dataset(start_date, end_date).copy()
+        df = self._trim_dataset(start_date, end_date)
 
         canvas.axes.cla() # Clear the canvas
 
@@ -99,8 +99,8 @@ class Analyser(object):
             canvas.axes.set_ylabel(labels[1])
             return
 
-        df['Date/Time'] = pd.to_datetime(df['Date/Time'], unit='s') # Convert float to datetime
-        df['Date'] = df['Date/Time'].dt.date # Extract date only
+        df['Date/Time'] = df['Date/Time'].apply(lambda x: datetime.fromtimestamp(x)) # Convert float to datetime
+        df['Date'] = df['Date/Time'].apply(lambda x: x.date()) # Extract date only
 
         if toolkit.get_config('split_subs'):
             df = df.groupby(['Date', 'Subreddit'])['SentimentScore'].sum().reset_index()

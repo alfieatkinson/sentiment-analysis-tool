@@ -18,7 +18,7 @@ def version() -> str:
     Returns:
         str: The version of the application.
     """
-    return 'v1.0'
+    return 'v1.1'
 
 def time() -> str:
     """
