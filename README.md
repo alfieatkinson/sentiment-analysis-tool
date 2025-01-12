@@ -2,6 +2,8 @@
 
 This assessment was submitted in partial fulfilment of the Degree of Bachelor of Science in Computer Science.
 
+Grade achieved: 76%
+
 ## Project Overview
 
 This project focuses on developing a sentiment analysis tool that uses various machine learning models to analyse social media posts for sentiment. It allows users to input a product or brand name, collects social media data via the Reddit API, and applies sentiment analysis models to determine whether the posts are positive, negative, or neutral.
